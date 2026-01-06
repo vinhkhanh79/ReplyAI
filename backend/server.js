@@ -272,26 +272,42 @@ app.post('/api/generate-suggestion', authenticateToken, async (req, res) => {
       ?.replace('user:', '')
       .trim();
 
-    // Xác định vai trò của người dùng dựa trên gender
-    const userRole = gender === 'male' ? 'anh' : gender === 'female' ? 'em' : 'bạn'; // Vai trò của người dùng (bạn là "anh", "em", hay "bạn")
-    const senderGender = gender === 'male' ? 'nữ' : gender === 'female' ? 'nam' : 'người gửi không xác định'; // Giới tính của người gửi (ngược lại với bạn)
+    // gender = giới tính của ĐỐI PHƯƠNG trong đoạn chat
+const senderGender =
+  gender === 'male'
+    ? 'nam'
+    : gender === 'female'
+    ? 'nữ'
+    : 'không xác định';
 
-    // Cập nhật prompt với ngữ cảnh rõ ràng
-    const prompt = `Bạn là trợ lý trò chuyện thông minh. Hãy đóng vai một người dùng có giới tính ${userRole === 'anh' ? 'nam' : userRole === 'em' ? 'nữ' : 'không xác định'} (tức là ${userRole}) để trả lời tin nhắn sau đây. Tin nhắn được gửi từ một ${senderGender} với tâm trạng ${tone}, ngôn ngữ ${language}:
+// Vai trò của BẠN khi trả lời (xưng hô trung lập, không đoán giới tính bạn)
+const userRole = 'bạn';
 
-    Tin nhắn nhận được: "${lastUserMessage}"
+// Prompt rõ ràng, không đánh tráo vai
+const prompt = `
+Bạn là một trợ lý gợi ý trả lời tin nhắn.
 
-    Yêu cầu:
-    1. Các gợi ý phải liên quan trực tiếp đến nội dung tin nhắn nhận được
-    2. Giữ nguyên ngôn ngữ (${language}) và văn phong ${tone}, phù hợp với giới tính của ${senderGender}
-    3. Đóng vai ${userRole} (người nhận tin nhắn) để trả lời
-    4. Mỗi gợi ý phải là 1 câu hoàn chỉnh
-    5. Đánh số từng gợi ý (1., 2., 3., 4., 5.)
+Ngữ cảnh:
+- Bạn đang đóng vai là ${userRole}, người NHẬN tin nhắn
+- Tin nhắn được gửi từ một người ${senderGender}
+- Văn phong mong muốn: ${tone}
+- Ngôn ngữ: ${language}
 
-    Gợi ý cho tin nhắn trên:`;
+Tin nhắn nhận được:
+"${lastUserMessage}"
+
+Yêu cầu:
+1. Đưa ra các gợi ý trả lời phù hợp với nội dung tin nhắn
+2. Giữ đúng ngôn ngữ ${language} và văn phong ${tone}
+3. Đóng vai ${userRole} để trả lời (không nhầm vai người gửi)
+4. Mỗi gợi ý là một câu hoàn chỉnh, tự nhiên
+5. Đưa ra 5 gợi ý, đánh số theo thứ tự (1. → 5.)
+
+Gợi ý trả lời:
+`;
 
     const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         contents: [{
           parts: [{

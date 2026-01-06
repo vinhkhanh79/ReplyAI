@@ -535,64 +535,61 @@ useEffect(() => {
 };
 
   const handleGetSuggestions = async () => {
-  if (conversation.length === 0) {
-    setError('Please start a conversation first');
-    return;
-  }
-
-  setIsLoading(true);
-  setError(null);
   try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/generate-suggestion`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        conversationHistory: conversation.map((msg) => `${msg.sender}: ${msg.text}`),
-        platform,
-        tone,
-        language,
-        gender,
-        userId,
-        conversationId: currentConversationId,
-      }),
-    });
+    setIsLoading(true);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Please start a conversation first');
+    }
+
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/generate-suggestion`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          conversationHistory: conversation.map(
+            (msg) => `${msg.sender}: ${msg.text}`
+          ),
+          platform,
+          tone,
+          language,
+          gender,
+          conversationId: currentConversationId,
+        }),
+      }
+    );
 
     const data = await response.json();
 
-    if (!response.ok) throw new Error(data.error || 'Failed to get suggestions');
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to get suggestions');
+    }
 
     const suggestionMessages = data.suggestions.map((suggestion, index) => ({
       sender: 'assistant',
       text: suggestion,
       timestamp: new Date(),
       isSuggestion: true,
-      isNewSuggestionGroup: index === 0, // Chỉ đánh dấu tin nhắn đầu tiên trong nhóm gợi ý
+      isNewSuggestionGroup: index === 0,
     }));
 
-    const updatedConversation = [...conversation, ...suggestionMessages];
-    setConversation(updatedConversation);
+    setConversation((prev) => [...prev, ...suggestionMessages]);
     setSuggestions(data.suggestions);
-
-    if (currentConversationId) {
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === currentConversationId
-            ? { ...conv, messages: updatedConversation }
-            : conv
-        )
-      );
-    }
 
     await fetchConversations();
   } catch (error) {
-    console.error('Error:', error);
+    console.error(error);
     setError(error.message);
   } finally {
     setIsLoading(false);
   }
 };
+
   
   const loadConversation = async (conversationId) => {
   try {
